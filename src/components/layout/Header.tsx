@@ -22,13 +22,18 @@ export const Header = () => {
           <Link to="/tutors" className="text-sm font-medium hover:text-primary">
             Find Tutors
           </Link>
-          <Link to="/how-it-works" className="text-sm font-medium hover:text-primary">
-            How it Works
-          </Link>
           {user && (
-            <Link to="/dashboard" className="text-sm font-medium hover:text-primary">
-              Dashboard
-            </Link>
+            <>
+              <Link to="/dashboard" className="text-sm font-medium hover:text-primary">
+                Dashboard
+              </Link>
+              <Link to="/bookings" className="text-sm font-medium hover:text-primary">
+                Bookings
+              </Link>
+              <Link to="/messages" className="text-sm font-medium hover:text-primary">
+                Messages
+              </Link>
+            </>
           )}
         </nav>
 
