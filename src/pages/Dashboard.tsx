@@ -1,18 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { SEO } from '@/components/common/SEO';
 import { supabase } from '@/integrations/supabase/client';
-import { CalendarDays, MessageSquare, Star, BookOpen, Users, Settings } from 'lucide-react';
+import { CalendarDays, MessageSquare, Star, BookOpen, Users, Settings, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [stats, setStats] = useState({
+    bookings: 0,
+    messages: 0,
+    earnings: 0,
+    rating: 0
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -21,34 +29,43 @@ const Dashboard = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
+    if (profile) {
+      fetchStats();
     }
-  }, [user]);
+  }, [profile]);
 
-  const fetchProfile = async () => {
+  const fetchStats = async () => {
+    if (!profile) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
+      // Fetch booking stats
+      const { count: bookingCount } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .or(`tutor_id.eq.${profile.id},learner_id.eq.${profile.id}`);
 
-      if (error) throw error;
-      setProfile(data);
+      // Fetch message stats  
+      const { count: messageCount } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('sender_id', profile.id);
+
+      setStats(prev => ({
+        ...prev,
+        bookings: bookingCount || 0,
+        messages: messageCount || 0
+      }));
     } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setProfileLoading(false);
+      console.error('Error fetching stats:', error);
     }
   };
 
   if (loading || profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <LoadingSpinner size="lg" message="Loading dashboard..." />
         </div>
       </div>
     );
@@ -63,6 +80,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Dashboard"
+        description={`Welcome to your ${isLearner ? 'learning' : 'teaching'} dashboard. Manage bookings, messages, and profile.`}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">
@@ -76,9 +97,64 @@ const Dashboard = () => {
           </p>
         </div>
 
+        {/* Stats Overview */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Bookings</p>
+                  <p className="text-2xl font-bold">{stats.bookings}</p>
+                </div>
+                <CalendarDays className="h-8 w-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Messages Sent</p>
+                  <p className="text-2xl font-bold">{stats.messages}</p>
+                </div>
+                <MessageSquare className="h-8 w-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {isTutor && (
+            <>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">This Month</p>
+                      <p className="text-2xl font-bold">R{stats.earnings}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-success" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Rating</p>
+                      <p className="text-2xl font-bold">{stats.rating || 'N/A'}</p>
+                    </div>
+                    <Star className="h-8 w-8 text-warning" />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Quick Actions */}
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
@@ -88,7 +164,7 @@ const Dashboard = () => {
             <CardContent className="space-y-3">
               {isLearner && (
                 <>
-                  <Button asChild className="w-full">
+                  <Button variant="premium" asChild className="w-full">
                     <Link to="/tutors">Find Tutors</Link>
                   </Button>
                   <Button variant="outline" asChild className="w-full">
@@ -98,11 +174,11 @@ const Dashboard = () => {
               )}
               {isTutor && (
                 <>
-                  <Button asChild className="w-full">
-                    <Link to="/tutor/profile">Update Profile</Link>
+                  <Button variant="premium" asChild className="w-full">
+                    <Link to="/profile">Update Profile</Link>
                   </Button>
                   <Button variant="outline" asChild className="w-full">
-                    <Link to="/tutor/bookings">Manage Bookings</Link>
+                    <Link to="/bookings">Manage Bookings</Link>
                   </Button>
                 </>
               )}

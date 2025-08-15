@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout/Header';
 import { TutorCard } from '@/components/tutors/TutorCard';
+import { TutorCardSkeleton } from '@/components/ui/skeleton-enhanced';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { SEO } from '@/components/common/SEO';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Filter, MapPin } from 'lucide-react';
+import { Search, Filter, MapPin, SlidersHorizontal } from 'lucide-react';
 
 const Tutors = () => {
   const [tutors, setTutors] = useState([]);
@@ -78,7 +81,7 @@ const Tutors = () => {
     }
   };
 
-  const filteredTutors = tutors.filter(tutor => {
+  const filteredTutors = useMemo(() => tutors.filter(tutor => {
     const matchesSearch = 
       tutor.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tutor.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,18 +108,26 @@ const Tutors = () => {
     })();
 
     return matchesSearch && matchesSkill && matchesLocation && matchesPrice;
-  });
+  }), [tutors, searchTerm, selectedSkill, selectedLocation, priceRange]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
+        <SEO 
+          title="Find Tutors"
+          description="Discover qualified tutors in Zeerust and online. Browse by subject, location, and price range."
+          keywords={['tutors', 'Zeerust', 'education', 'subjects', 'online learning']}
+        />
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-muted-foreground">Loading tutors...</p>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Find Your Perfect Tutor</h1>
+            <p className="text-muted-foreground">Discover skilled tutors in your area or online</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <TutorCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       </div>
@@ -125,6 +136,11 @@ const Tutors = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Find Tutors"
+        description="Discover qualified tutors in Zeerust and online. Browse by subject, location, and price range."
+        keywords={['tutors', 'Zeerust', 'education', 'subjects', 'online learning']}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">
@@ -136,7 +152,7 @@ const Tutors = () => {
         </div>
 
         {/* Search and Filters */}
-        <Card className="mb-8">
+        <Card className="mb-8 shadow-lg">
           <CardContent className="p-6">
             <div className="grid gap-4 md:grid-cols-4">
               <div className="relative">

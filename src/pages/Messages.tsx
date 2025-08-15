@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,18 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { MessageSkeleton } from '@/components/ui/skeleton-enhanced';
+import { SEO } from '@/components/common/SEO';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Send, MessageSquare, User } from 'lucide-react';
+import { Send, MessageSquare, User, Phone, Video } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const Messages = () => {
   const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  const [profile, setProfile] = useState<any>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -33,12 +36,6 @@ const Messages = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
 
   useEffect(() => {
     if (profile) {
@@ -57,20 +54,9 @@ const Messages = () => {
     scrollToBottom();
   }, [messages]);
 
-  const fetchProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
   const fetchConversations = async () => {
     try {
@@ -234,9 +220,6 @@ const Messages = () => {
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const getOtherParticipant = (booking: any) => {
     return profile?.id === booking.tutor_id ? booking.learner : booking.tutor;
@@ -247,17 +230,16 @@ const Messages = () => {
     return `${other.first_name} ${other.last_name}`;
   };
 
-  if (loading || loadingConversations) {
+  if (loading || profileLoading || loadingConversations) {
     return (
       <div className="min-h-screen bg-background">
+        <SEO 
+          title="Messages"
+          description="Chat with your tutors and students. Manage all your conversations in one place."
+        />
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-muted-foreground">Loading messages...</p>
-            </div>
-          </div>
+          <LoadingSpinner size="lg" message="Loading messages..." />
         </div>
       </div>
     );
@@ -269,6 +251,10 @@ const Messages = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Messages"
+        description="Chat with your tutors and students. Manage all your conversations in one place."
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">
@@ -359,32 +345,40 @@ const Messages = () => {
               {selectedBooking ? (
                 <>
                   <CardHeader className="pb-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={getOtherParticipant(selectedBooking).avatar_url} />
-                        <AvatarFallback>
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-lg">
-                          {getConversationTitle(selectedBooking)}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedBooking.skill.name} • {selectedBooking.lesson_date} • {selectedBooking.start_time}
-                        </p>
-                      </div>
-                    </div>
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <Avatar>
+                         <AvatarImage src={getOtherParticipant(selectedBooking).avatar_url} />
+                         <AvatarFallback>
+                           <User className="h-4 w-4" />
+                         </AvatarFallback>
+                       </Avatar>
+                       <div>
+                         <CardTitle className="text-lg">
+                           {getConversationTitle(selectedBooking)}
+                         </CardTitle>
+                         <p className="text-sm text-muted-foreground">
+                           {selectedBooking.skill.name} • {selectedBooking.lesson_date} • {selectedBooking.start_time}
+                         </p>
+                       </div>
+                     </div>
+                     <div className="flex gap-2">
+                       <Button variant="outline" size="sm">
+                         <Phone className="h-4 w-4" />
+                       </Button>
+                       <Button variant="outline" size="sm">
+                         <Video className="h-4 w-4" />
+                       </Button>
+                     </div>
+                   </div>
                   </CardHeader>
                   <Separator />
                   
-                  {/* Messages */}
-                  <CardContent className="p-4 h-[400px] overflow-y-auto">
-                    {loadingMessages ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    ) : messages.length > 0 ? (
+                   {/* Messages */}
+                   <CardContent className="p-4 h-[400px] overflow-y-auto custom-scrollbar">
+                     {loadingMessages ? (
+                       <MessageSkeleton />
+                     ) : messages.length > 0 ? (
                       <div className="space-y-4">
                         {messages.map((message) => {
                           const isOwnMessage = message.sender_id === profile.id;
