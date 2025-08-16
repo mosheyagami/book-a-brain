@@ -22,6 +22,9 @@ export const Header = () => {
           <Link to="/tutors" className="text-sm font-medium hover:text-primary">
             Find Tutors
           </Link>
+          <Link to="/about" className="text-sm font-medium hover:text-primary">
+            About
+          </Link>
           {user && (
             <>
               <Link to="/dashboard" className="text-sm font-medium hover:text-primary">

@@ -13,6 +13,7 @@ import TutorProfile from "./pages/TutorProfile";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
 import Bookings from "./pages/Bookings";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/bookings" element={<Bookings />} />
+              <Route path="/about" element={<About />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
