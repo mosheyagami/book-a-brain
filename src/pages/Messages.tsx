@@ -31,6 +31,51 @@ const Messages = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
 
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const subscribeToMessages = useCallback(() => {
+    if (!selectedBooking) return;
+
+    const channel = supabase
+      .channel(`messages-${selectedBooking.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `booking_id=eq.${selectedBooking.id}`
+        },
+        (payload) => {
+          // Fetch the complete message with sender info
+          supabase
+            .from('messages')
+            .select(`
+              *,
+              sender:profiles!messages_sender_id_fkey (
+                first_name,
+                last_name,
+                avatar_url
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                setMessages(prev => [...prev, data]);
+              }
+            });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBooking]);
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -46,17 +91,14 @@ const Messages = () => {
   useEffect(() => {
     if (selectedBooking) {
       fetchMessages();
-      subscribeToMessages();
+      const cleanup = subscribeToMessages();
+      return cleanup;
     }
-  }, [selectedBooking]);
+  }, [selectedBooking, subscribeToMessages]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
 
   const fetchConversations = async () => {
     try {
@@ -151,46 +193,6 @@ const Messages = () => {
     }
   };
 
-  const subscribeToMessages = () => {
-    if (!selectedBooking) return;
-
-    const channel = supabase
-      .channel('messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `booking_id=eq.${selectedBooking.id}`
-        },
-        (payload) => {
-          // Fetch the complete message with sender info
-          supabase
-            .from('messages')
-            .select(`
-              *,
-              sender:profiles!messages_sender_id_fkey (
-                first_name,
-                last_name,
-                avatar_url
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single()
-            .then(({ data }) => {
-              if (data) {
-                setMessages(prev => [...prev, data]);
-              }
-            });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedBooking || !profile) return;
