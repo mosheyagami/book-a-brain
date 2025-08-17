@@ -222,7 +222,7 @@ export const BookingDialog = ({ tutor, tutorSkills, isOpen, onClose }: BookingDi
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="online">Online</SelectItem>
-                  <SelectItem value="in_person">In-person</SelectItem>
+                  <SelectItem value="in-person">In-person</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -231,7 +231,7 @@ export const BookingDialog = ({ tutor, tutorSkills, isOpen, onClose }: BookingDi
           {/* Location */}
           <div className="grid gap-2">
             <Label htmlFor="location">
-              Location {lessonType === 'in_person' ? '*' : '(Optional)'}
+              Location {lessonType === 'in-person' ? '*' : '(Optional)'}
             </Label>
             <Input
               id="location"
